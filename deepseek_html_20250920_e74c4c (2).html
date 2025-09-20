@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Florr.io 网页版</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 90vw;
+            height: 90vh;
+            max-width: 1200px;
+            max-height: 800px;
+            background-color: #2a2a2a;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+            overflow: hidden;
+        }
+        
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            background-color: #0a4d0a;
+            cursor: crosshair;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        #healthBar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 200px;
+            height: 20px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        #healthFill {
+            height: 100%;
+            background-color: #ff3333;
+            transition: width 0.3s ease;
+        }
+        
+        #fps {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 16px;
+        }
+        
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 10;
+        }
+        
+        #startScreen h1 {
+            font-size: 48px;
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.7);
+        }
+        
+        #playerName {
+            padding: 10px 20px;
+            font-size: 18px;
+            border-radius: 5px;
+            border: none;
+            margin-bottom: 20px;
+            width: 300px;
+        }
+        
+        #startButton {
+            padding: 12px 30px;
+            font-size: 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        #startButton:hover {
+            background-color: #45a049;
+        }
+        
+        #inventory {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .inventorySlot {
+            width: 50px;
+            height: 50px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 12px;
+        }
+        
+        #gameOver {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 20;
+        }
+        
+        #gameOver h2 {
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+        
+        #restartButton {
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* 新添加的样式 */
+        .lobby-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #3498DB;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background-color 0.3s;
+        }
+        
+        .lobby-button:hover {
+            background-color: #2980B9;
+        }
+        
+        #petalSelection {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+            max-width: 600px;
+            justify-content: center;
+        }
+        
+        .petal-item {
+            width: 50px;
+            height: 50px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: grab;
+            overflow: hidden;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+        
+        .petal-item:hover {
+            transform: scale(1.1);
+            border-color: #4CAF50;
+        }
+        
+        .petal-item.dragging {
+            opacity: 0.5;
+        }
+        
+        .petal-item img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        
+        .equipment-slot {
+            width: 60px;
+            height: 60px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            margin: 5px;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .equipment-slot.drag-over {
+            background-color: rgba(76, 175, 80, 0.3);
+            border: 2px solid #4CAF50;
+        }
+        
+        .equipment-slot.equipped {
+            border: 2px solid #4CAF50;
+            background-color: rgba(76, 175, 80, 0.2);
+        }
+        
+        #equipmentSlots {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px 0;
+            max-width: 400px;
+        }
+        
+        #lobbyUI {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        #bagWindow, #absorbWindow, #galleryWindow {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 70%;
+            background-color: rgba(50, 50, 50, 0.9);
+            border-radius: 10px;
+            padding: 20px;
+            z-index: 15;
+            overflow-y: auto;
+        }
+        
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ff4757;
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        #loadingScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 25;
+        }
+        
+        #progressBar {
+            width: 300px;
+            height: 20px;
+            background-color: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        #progressFill {
+            height: 100%;
+            background-color: #4CAF50;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div id="ui">
+            <div id="healthBar">
+                <div id="healthFill"></div>
+            </div>
+            <div id="fps">FPS: 0</div>
+            <div id="inventory">
+                <!-- 装备的花瓣将通过JavaScript动态生成 -->
+            </div>
+        </div>
+        
+        <div id="startScreen">
+            <h1>thoita.io</h1>
+            <input type="text" id="playerName" placeholder="输入你的名字" value="Player">
+            <button id="startButton">开始游戏</button>
+            
+            <div id="lobbyUI" style="display:none;">
+                <h2>Your Build</h2>
+                <div id="equipmentSlots">
+                    <!-- 装备槽将通过JS动态生成 -->
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <button class="lobby-button" id="bagButton">Bag</button>
+                    <button class="lobby-button" id="absorbButton">Absorb</button>
+                    <button class="lobby-button" id="galleryButton">Gallery</button>
+                    <button class="lobby-button" id="readyButton">Start</button>
+                </div>
+                
+                <div id="petalSelection">
+                    <!-- 花瓣选择将通过JS动态生成 -->
+                </div>
+            </div>
+        </div>
+        
+        <div id="bagWindow">
+            <button class="close-button" id="closeBag">X</button>
+            <h2>背包</h2>
+            <div id="bagContent">
+                <!-- 背包内容将通过JS动态生成 -->
+            </div>
+        </div>
+        
+        <div id="absorbWindow">
+            <button class="close-button" id="closeAbsorb">X</button>
+            <h2>吸收</h2>
+            <p>吸收功能暂未实现</p>
+        </div>
+        
+        <div id="galleryWindow">
+            <button class="close-button" id="closeGallery">X</button>
+            <h2>图鉴</h2>
+            <p>图鉴功能暂未实现</p>
+        </div>
+        
+        <div id="gameOver">
+            <h2>游戏结束</h2>
+            <button id="restartButton">重新开始</button>
+        </div>
+        
+        <div id="loadingScreen">
+            <h2>加载资源</h2>
+            <div id="progressBar">
+                <div id="progressFill"></div>
+            </div>
+            <div id="loadingText">0%</div>
+        </div>
+    </div>
+
+    <script>
+        // 游戏配置
+        const config = {
+            serverAddress: 'http://7311ob1wp635.vicp.fun', // 服务器地址
+            canvasWidth: 1200,
+            canvasHeight: 800,
+            playerSize: 40,
+            petalSize: 30,
+            mobSize: 60,
+            fps: 30,
+            backgroundColor: '#0a4d0a'
+        };
+
+        // 游戏状态
+        const gameState = {
+            connected: false,
+            playerName: 'Player',
+            playerHealth: 100,
+            playerMaxHealth: 100,
+            playerPosition: { x: 0, y: 0 },
+            playerAngle: 0,
+            playerState: 0, // 0: 正常, 1: 攻击, -1: 防御
+            petals: [],
+            mobs: [],
+            flowers: [],
+            collectDrops: [],
+            lastFrameTime: 0,
+            fps: 0,
+            socket: null,
+            // 新添加的状态
+            loadedResources: 0,
+            totalResources: 0,
+            isLobby: true,
+            equipmentSlots: 10,
+            equippedPetals: Array(10).fill(null),
+            availablePetals: [],
+            petalImages: {}
+        };
+
+        // DOM 元素
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const healthFill = document.getElementById('healthFill');
+        const fpsDisplay = document.getElementById('fps');
+        const startScreen = document.getElementById('startScreen');
+        const playerNameInput = document.getElementById('playerName');
+        const startButton = document.getElementById('startButton');
+        const gameOverScreen = document.getElementById('gameOver');
+        const restartButton = document.getElementById('restartButton');
+        const lobbyUI = document.getElementById('lobbyUI');
+        const equipmentSlots = document.getElementById('equipmentSlots');
+        const petalSelection = document.getElementById('petalSelection');
+        const bagWindow = document.getElementById('bagWindow');
+        const absorbWindow = document.getElementById('absorbWindow');
+        const galleryWindow = document.getElementById('galleryWindow');
+        const closeBag = document.getElementById('closeBag');
+        const closeAbsorb = document.getElementById('closeAbsorb');
+        const closeGallery = document.getElementById('closeGallery');
+        const bagButton = document.getElementById('bagButton');
+        const absorbButton = document.getElementById('absorbButton');
+        const galleryButton = document.getElementById('galleryButton');
+        const readyButton = document.getElementById('readyButton');
+        const loadingScreen = document.getElementById('loadingScreen');
+        const progressFill = document.getElementById('progressFill');
+        const loadingText = document.getElementById('loadingText');
+
+        // 资源列表 - 需要加载的图片（根据实际文件名修改）
+        const resources = [
+            // 花瓣图片（使用实际文件名）
+            '01.png', '02.png', '03.png', '04.png', '05.png', '06.png', '07.png',
+            '11.png', '12.png', '13.png', '14.png', '15.png', '16.png', '17.png',
+            '31.png', '32.png', '33.png', '34.png', '35.png', '36.png', '37.png',
+            '41.png', '42.png', '43.png', '44.png', '45.png', '46.png', '47.png',
+            // 怪物图片
+            'hornet.png', 'centipede0.png', 'centipede1.png', 'rock.png', 'ladybug.png',
+            // 其他图片
+            'flower.png', 'backgroundmini.png', 'background.png', 'logo.png',
+            // UI元素
+            'bag.png', 'absorb.png', 'gallery.png', 'ready.png', 'none.png',
+            // 游戏内花瓣图片
+            'wing.png', 'missile.png', 'basic.png', 'leaf.png', 'hornetMissile.png'
+        ];
+
+        // 初始化游戏
+        function initGame() {
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // 事件监听
+            startButton.addEventListener('click', showLobby);
+            restartButton.addEventListener('click', restartGame);
+            
+            // 大厅按钮事件
+            bagButton.addEventListener('click', () => showWindow('bag'));
+            absorbButton.addEventListener('click', () => showWindow('absorb'));
+            galleryButton.addEventListener('click', () => showWindow('gallery'));
+            readyButton.addEventListener('click', startGame);
+            
+            // 关闭窗口按钮
+            closeBag.addEventListener('click', () => hideWindow('bag'));
+            closeAbsorb.addEventListener('click', () => hideWindow('absorb'));
+            closeGallery.addEventListener('click', () => hideWindow('gallery'));
+            
+            // 鼠标事件
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            canvas.addEventListener('contextmenu', e => e.preventDefault());
+            
+            // 加载资源
+            loadResources();
+            
+            // 开始游戏循环
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 加载资源
+        function loadResources() {
+            gameState.totalResources = resources.length;
+            gameState.loadedResources = 0;
+            
+            resources.forEach(resource => {
+                const img = new Image();
+                img.onload = () => {
+                    gameState.loadedResources++;
+                    const progress = (gameState.loadedResources / gameState.totalResources) * 100;
+                    progressFill.style.width = `${progress}%`;
+                    loadingText.textContent = `${Math.round(progress)}%`;
+                    
+                    if (gameState.loadedResources === gameState.totalResources) {
+                        setTimeout(() => {
+                            loadingScreen.style.display = 'none';
+                        }, 500);
+                    }
+                };
+                img.onerror = () => {
+                    console.error(`Failed to load resource: ${resource}`);
+                    gameState.loadedResources++;
+                };
+                img.src = resource;
+                gameState.petalImages[resource] = img;
+            });
+        }
+
+        // 根据花瓣类型和等级获取正确的图片文件名
+        function getPetalImageName(type, level) {
+            // 将类型和等级转换为两位数字符串
+            const typeStr = type.toString() + level.toString()
+            const levelStr = type.toString() + level.toString()
+            
+            // 查找匹配的图片
+            for (const resource of resources) {
+                if (resource.startsWith(typeStr) && resource.endsWith('.png')) {
+                    // 检查是否是完全匹配（4位数字）
+                    if (resource.length === 6 && resource.replace('.png', '') === (typeStr + levelStr)) {
+                        return resource;
+                    }
+                }
+            }
+            
+            // 如果没有找到完全匹配的，尝试找到类型匹配的
+            for (const resource of resources) {
+                if (resource.startsWith(typeStr) && resource.endsWith('.png')) {
+                    return resource;
+                }
+            }
+            
+            // 如果还是没有找到，返回默认图片
+            return 'none.png';
+        }
+
+        // 根据对象名称获取正确的图片
+        function getObjectImage(obj) {
+            if (obj.name.includes('petal')) {
+                // 对于花瓣，使用类型和等级获取图片
+                const matches = obj.name.match(/\d+/g);
+                if (matches && matches.length >= 2) {
+                    const type = parseInt(matches[0]);
+                    const level = parseInt(matches[1]);
+                    return getPetalImageName(type, level);
+                }
+                return 'none.png';
+            }
+            else return obj.name + '.png';
+            // return 'none.png';
+        }
+
+        // 显示大厅界面
+        function showLobby() {
+            gameState.playerName = playerNameInput.value || 'Player';
+            startButton.style.display = 'none';
+            playerNameInput.style.display = 'none';
+            lobbyUI.style.display = 'flex';
+            
+            // 初始化装备槽
+            initializeEquipmentSlots();
+            
+            // 初始化可用花瓣
+            initializeAvailablePetals();
+        }
+
+        // 初始化装备槽
+        function initializeEquipmentSlots() {
+            equipmentSlots.innerHTML = '';
+            for (let i = 0; i < gameState.equipmentSlots; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'equipment-slot';
+                slot.dataset.index = i;
+                
+                // 添加拖拽事件监听
+                slot.addEventListener('dragover', handleDragOver);
+                slot.addEventListener('dragenter', handleDragEnter);
+                slot.addEventListener('dragleave', handleDragLeave);
+                slot.addEventListener('drop', handleDrop);
+                
+                // 添加提示文本
+                const hint = document.createElement('div');
+                hint.textContent = i + 1;
+                hint.style.color = 'rgba(255, 255, 255, 0.5)';
+                hint.style.fontSize = '12px';
+                slot.appendChild(hint);
+                
+                equipmentSlots.appendChild(slot);
+            }
+        }
+
+        // 初始化可用花瓣
+        function initializeAvailablePetals() {
+            // 模拟一些花瓣数据
+            gameState.availablePetals = [
+                { type: 1, level: 1, count: 2 },
+                { type: 1, level: 2, count: 4 },
+                { type: 1, level: 3, count: 1 },
+                { type: 1, level: 4, count: 3 },
+                { type: 1, level: 5, count: 2 },
+                { type: 1, level: 6, count: 5 },
+                { type: 1, level: 7, count: 1 },
+                { type: 3, level: 1, count: 3 },
+                { type: 3, level: 2, count: 2 },
+                { type: 3, level: 3, count: 4 },
+                { type: 3, level: 4, count: 1 },
+                { type: 3, level: 5, count: 2 },
+                { type: 3, level: 6, count: 3 },
+                { type: 3, level: 7, count: 5 },
+                { type: 4, level: 1, count: 1 },
+                { type: 4, level: 2, count: 3 },
+                { type: 4, level: 3, count: 2 },
+                { type: 4, level: 4, count: 4 },
+                { type: 4, level: 5, count: 1 },
+                { type: 4, level: 6, count: 2 },
+                { type: 4, level: 7, count: 3 }
+            ];
+            
+            petalSelection.innerHTML = '';
+            gameState.availablePetals.forEach((petal, index) => {
+                const item = document.createElement('div');
+                item.className = 'petal-item';
+                item.draggable = true;
+                item.dataset.index = index;
+                item.title = `类型: ${petal.type}, 等级: ${petal.level}, 数量: ${petal.count}`;
+                
+                // 获取正确的图片名称
+                const imgName = getPetalImageName(petal.type, petal.level);
+                
+                // 尝试加载图片，如果没有则显示文本
+                if (gameState.petalImages[imgName]) {
+                    const img = document.createElement('img');
+                    img.src = imgName;
+                    img.onerror = function() {
+                        // 如果图片加载失败，显示文本
+                        item.textContent = `${petal.type}-${petal.level}`;
+                        item.style.fontSize = '12px';
+                    };
+                    item.appendChild(img);
+                } else {
+                    item.textContent = `${petal.type}-${petal.level}`;
+                    item.style.fontSize = '12px';
+                }
+                
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragend', handleDragEnd);
+                petalSelection.appendChild(item);
+            });
+        }
+
+        // 拖拽开始处理
+        function handleDragStart(e) {
+            const petalItem = e.target.closest('.petal-item');
+            if (!petalItem) return; // 添加检查，防止不是从花瓣开始的拖拽
+
+            const index = petalItem.dataset.index;
+            e.dataTransfer.setData('text/plain', index);
+            petalItem.classList.add('dragging');
+            console.log('开始拖拽:', index);
+        }
+
+        // 拖拽结束处理
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+        }
+
+        // 拖拽经过处理
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDragEnter(e) {
+            e.preventDefault();
+            if (e.target.classList.contains('equipment-slot')) {
+                e.target.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            if (e.target.classList.contains('equipment-slot')) {
+                e.target.classList.remove('drag-over');
+            }
+        }
+
+        // 拖拽放下处理
+        function handleDrop(e) {
+            e.preventDefault();
+            
+            // 移除所有拖拽样式
+            document.querySelectorAll('.equipment-slot.drag-over').forEach(slot => {
+                slot.classList.remove('drag-over');
+            });
+            
+            const petalIndex = e.dataTransfer.getData('text/plain');
+            const slotElement = e.target.closest('.equipment-slot');
+            
+            if (!slotElement) return;
+            
+            const slotIndex = slotElement.dataset.index;
+            
+            if (petalIndex !== '' && slotIndex !== undefined) {
+                equipPetal(parseInt(petalIndex), parseInt(slotIndex));
+            }
+            
+            // 移除拖拽样式
+            const draggingElement = document.querySelector('.petal-item.dragging');
+            if (draggingElement) {
+                draggingElement.classList.remove('dragging');
+            }
+        }
+
+        function updateInventoryDisplay() {
+            const inventory = document.getElementById('inventory');
+            inventory.innerHTML = ''; // 清空现有内容
+
+            // 显示装备的花瓣
+            gameState.equippedPetals.forEach((petal, index) => {
+                const slot = document.createElement('div');
+                slot.className = 'inventorySlot';
+
+                if (petal) {
+                    // 如果有装备的花瓣，显示花瓣信息
+                    const imgName = getPetalImageName(petal.type, petal.level);
+                    if (gameState.petalImages[imgName]) {
+                        const img = document.createElement('img');
+                        img.src = imgName;
+                        img.style.maxWidth = '100%';
+                        img.style.maxHeight = '100%';
+                        slot.appendChild(img);
+                    } else {
+                        slot.textContent = `${petal.type}-${petal.level}`;
+                    }
+                    slot.title = `类型: ${petal.type}, 等级: ${petal.level}`;
+                } else {
+                    // 如果没有装备花瓣，显示空槽位
+                    slot.textContent = index + 1;
+                    slot.style.color = 'rgba(255, 255, 255, 0.5)';
+                }
+
+                inventory.appendChild(slot);
+            });
+        }       
+
+        // 装备花瓣
+        function equipPetal(petalIndex, slotIndex) {
+            if (petalIndex >= 0 && petalIndex < gameState.availablePetals.length &&
+                slotIndex >= 0 && slotIndex < gameState.equipmentSlots) {
+                
+                const petal = gameState.availablePetals[petalIndex];
+                
+                // 检查花瓣数量是否足够
+                if (petal.count <= 0) {
+                    alert('该花瓣数量不足!');
+                    return;
+                }
+                
+                gameState.equippedPetals[slotIndex] = {...petal};
+                
+                // 更新UI
+                const slot = equipmentSlots.querySelector(`.equipment-slot[data-index="${slotIndex}"]`);
+                slot.innerHTML = '';
+                slot.classList.add('equipped');
+                
+                // 获取正确的图片名称
+                const imgName = getPetalImageName(petal.type, petal.level);
+                
+                if (gameState.petalImages[imgName]) {
+                    const img = document.createElement('img');
+                    img.src = imgName;
+                    img.style.maxWidth = '100%';
+                    img.style.maxHeight = '100%';
+                    slot.appendChild(img);
+                } else {
+                    slot.textContent = `${petal.type}-${petal.level}`;
+                    slot.style.fontSize = '14px';
+                    slot.style.color = 'white';
+                }
+                
+                // 减少可用花瓣数量
+                petal.count--;
+                
+                // 更新可用花瓣UI
+                updateAvailablePetalsUI();
+                updateInventoryDisplay();
+            }
+        }
+
+        // 添加更新可用花瓣UI的函数
+        function updateAvailablePetalsUI() {
+            const petalItems = petalSelection.querySelectorAll('.petal-item');
+            petalItems.forEach((item, index) => {
+                const petal = gameState.availablePetals[index];
+                if (petal) {
+                    item.title = `类型: ${petal.type}, 等级: ${petal.level}, 数量: ${petal.count}`;
+                    
+                    // 如果数量为0，禁用拖拽
+                    if (petal.count <= 0) {
+                        item.style.opacity = '0.5';
+                        item.draggable = false;
+                    } else {
+                        item.style.opacity = '1';
+                        item.draggable = true;
+                    }
+                }
+            });
+        }
+
+        // 显示窗口
+        function showWindow(type) {
+            if (type === 'bag') {
+                bagWindow.style.display = 'block';
+                initializeBagContent();
+            } else if (type === 'absorb') {
+                absorbWindow.style.display = 'block';
+            } else if (type === 'gallery') {
+                galleryWindow.style.display = 'block';
+            }
+        }
+
+        // 隐藏窗口
+        function hideWindow(type) {
+            if (type === 'bag') {
+                bagWindow.style.display = 'none';
+            } else if (type === 'absorb') {
+                absorbWindow.style.display = 'none';
+            } else if (type === 'gallery') {
+                galleryWindow.style.display = 'none';
+            }
+        }
+
+        // 初始化背包内容
+        function initializeBagContent() {
+            const bagContent = document.getElementById('bagContent');
+            bagContent.innerHTML = '';
+            
+            gameState.availablePetals.forEach((petal, index) => {
+                const item = document.createElement('div');
+                item.style.display = 'inline-block';
+                item.style.margin = '10px';
+                item.style.textAlign = 'center';
+                
+                // 获取正确的图片名称
+                const imgName = getPetalImageName(petal.type, petal.level);
+                
+                // 尝试加载图片，如果没有则显示文本
+                if (gameState.petalImages[imgName]) {
+                    const img = document.createElement('img');
+                    img.src = imgName;
+                    img.style.width = '50px';
+                    img.style.height = '50px';
+                    item.appendChild(img);
+                } else {
+                    const text = document.createElement('div');
+                    text.textContent = `${petal.type}-${petal.level}`;
+                    text.style.width = '50px';
+                    text.style.height = '50px';
+                    text.style.lineHeight = '50px';
+                    text.style.background = '#555';
+                    text.style.borderRadius = '5px';
+                    item.appendChild(text);
+                }
+                
+                const count = document.createElement('div');
+                count.textContent = `数量: ${petal.count}`;
+                count.style.marginTop = '5px';
+                item.appendChild(count);
+                
+                bagContent.appendChild(item);
+            });
+        }
+
+        // 开始游戏
+        function startGame() {
+            lobbyUI.style.display = 'none';
+            startScreen.style.display = 'none';
+            connectToServer();
+            updateInventoryDisplay();
+        }
+
+        // 重新开始游戏
+        function restartGame() {
+            gameOverScreen.style.display = 'none';
+            gameState.playerHealth = gameState.playerMaxHealth;
+            connectToServer();
+        }
+
+        // 连接到服务器
+        function connectToServer() {
+            try {
+                gameState.socket = new WebSocket(config.serverAddress);
+                
+                gameState.socket.onopen = () => {
+                    console.log('连接到服务器成功');
+                    gameState.connected = true;
+                    
+                    // 发送连接消息
+                    sendToServer({
+                        COMMAND: 'CONNECT',
+                        client_type: gameState.playerName,
+                        id: 1
+                    });
+                    
+                    // 发送开始游戏消息
+                    setTimeout(() => {
+                        // 构建装备的花瓣数据
+                        const build = gameState.equippedPetals.map(petal => {
+                            return petal ? [petal.type, petal.level] : [-1, 0];
+                        });
+                        
+                        sendToServer({
+                            COMMAND: 'PLAY',
+                            client_type: gameState.playerName,
+                            data: build,
+                            id: 0
+                        });
+                    }, 500);
+                };
+                
+                gameState.socket.onmessage = (event) => {
+                    handleServerMessage(event.data);
+                };
+                
+                gameState.socket.onerror = (error) => {
+                    console.error('WebSocket错误:', error);
+                    gameState.connected = false;
+                };
+                
+                gameState.socket.onclose = () => {
+                    console.log('与服务器断开连接');
+                    gameState.connected = false;
+                };
+            } catch (error) {
+                console.error('连接服务器失败:', error);
+            }
+        }
+
+        // 处理服务器消息
+        function handleServerMessage(data) {
+            try {
+                // 假设服务器发送的是JSON数据
+                const message = JSON.parse(data);
+                
+                if (message.health !== undefined) {
+                    gameState.playerHealth = message.health;
+                    gameState.playerMaxHealth = message.maxhealth;
+                    updateHealthBar();
+                }
+                
+                if (message.Myflower) {
+                    gameState.playerPosition = { 
+                        x: message.Myflower[1][0], 
+                        y: message.Myflower[1][1] 
+                    };
+                }
+                
+                if (message.petals) {
+                    gameState.petals = message.petals.map(petal => ({
+                        name: petal[0],
+                        position: { x: petal[1][0], y: petal[1][1] },
+                        angle: petal[2],
+                        level: petal[3],
+                        size: petal[4]
+                    }));
+                }
+                
+                if (message.mobs) {
+                    gameState.mobs = message.mobs.map(mob => ({
+                        name: mob[0],
+                        position: { x: mob[1][0], y: mob[1][1] },
+                        angle: mob[2],
+                        level: mob[3],
+                        size: mob[4]
+                    }));
+                }
+                
+                if (message.flowers) {
+                    console.log(message.flowers);
+                    gameState.flowers = message.flowers.map(flower => ({
+                        name: flower[0],
+                        position: { x: flower[1][0], y: flower[1][1] },
+                        angle: 0,
+                        level: flower[3],
+                        size: flower[4]
+                    }));
+                }
+                
+                if (message.collectDrop) {
+                    gameState.collectDrops = message.collectDrop.map(drop => ({
+                        name: drop[0],
+                        position: { x: drop[1][0], y: drop[1][1] },
+                        angle: drop[2],
+                        level: drop[3],
+                        size: drop[4]
+                    }));
+                }
+                
+                // 检查游戏结束
+                if (gameState.playerHealth <= 0) {
+                    gameOverScreen.style.display = 'flex';
+                }
+            } catch (error) {
+                console.error('解析服务器消息失败:', error);
+            }
+        }
+
+        // 发送消息到服务器
+        function sendToServer(data) {
+            if (gameState.connected && gameState.socket.readyState === WebSocket.OPEN) {
+                gameState.socket.send(JSON.stringify(data));
+            }
+        }
+
+        // 更新血条
+        function updateHealthBar() {
+            const healthPercent = Math.max(0, gameState.playerHealth / gameState.playerMaxHealth);
+            healthFill.style.width = `${healthPercent * 100}%`;
+        }
+
+        // 处理鼠标移动
+        function handleMouseMove(event) {
+            if (!gameState.connected) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            
+            // 计算相对于玩家中心的位置
+            const playerCenterX = canvas.width / 2;
+            const playerCenterY = canvas.height / 2;
+            
+            const relativeX = mouseX - playerCenterX;
+            const relativeY = mouseY - playerCenterY;
+            
+            // 计算角度
+            gameState.playerAngle = Math.atan2(relativeY, relativeX);
+            
+            // 发送鼠标位置到服务器
+            sendToServer({
+                COMMAND: 'SEND_DATA',
+                client_type: gameState.playerName,
+                data: [relativeX, relativeY, gameState.playerState],
+                id: 0
+            });
+        }
+
+        // 处理鼠标按下
+        function handleMouseDown(event) {
+            if (!gameState.connected) return;
+            
+            if (event.button === 0) { // 左键
+                gameState.playerState = 1; // 攻击
+            } else if (event.button === 2) { // 右键
+                gameState.playerState = -1; // 防御
+            }
+            
+            // 发送状态到服务器
+            sendToServer({
+                COMMAND: 'SEND_DATA',
+                client_type: gameState.playerName,
+                data: [0, 0, gameState.playerState],
+                id: 0
+            });
+        }
+
+        // 处理鼠标释放
+        function handleMouseUp(event) {
+            if (!gameState.connected) return;
+            
+            gameState.playerState = 0; // 正常状态
+            
+            // 发送状态到服务器
+            sendToServer({
+                COMMAND: 'SEND_DATA',
+                client_type: gameState.playerName,
+                data: [0, 0, gameState.playerState],
+                id: 0
+            });
+        }
+
+        // 游戏主循环
+        function gameLoop(timestamp) {
+            // 计算FPS
+            if (gameState.lastFrameTime) {
+                const delta = timestamp - gameState.lastFrameTime;
+                gameState.fps = Math.round(1000 / delta);
+                fpsDisplay.textContent = `FPS: ${gameState.fps}`;
+            }
+            gameState.lastFrameTime = timestamp;
+            
+            // 清除画布
+            ctx.fillStyle = config.backgroundColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制背景元素
+            drawBackground();
+            
+            // 绘制游戏对象
+            drawGameObjects();
+            
+            // 绘制玩家
+            drawPlayer();
+            
+            // 继续游戏循环
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 绘制背景
+        function drawBackground() {
+            // 绘制简单的背景网格
+            ctx.strokeStyle = 'rgba(0, 100, 0, 1)';
+            ctx.lineWidth = 1;
+            
+            const gridSize = 50;
+            const offsetX = gameState.playerPosition.x % gridSize;
+            const offsetY = gameState.playerPosition.y % gridSize;
+            
+            for (let x = -offsetX; x < canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            for (let y = -offsetY; y < canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+        }
+
+        // 绘制游戏对象
+        function drawGameObjects() {
+            // 绘制收集物
+            gameState.collectDrops.forEach(drop => {
+                drawObject(drop);
+            });
+            
+            // 绘制花瓣
+            gameState.petals.forEach(petal => {
+                drawObject(petal);
+            });
+            
+            // 绘制怪物
+            gameState.mobs.forEach(mob => {
+                drawObject(mob);
+            });
+            
+            // 绘制其他花朵
+            gameState.flowers.forEach(flower => {
+                flower.angle = 0
+                drawObject(flower);
+            });
+        }
+
+        // 绘制单个对象
+        function drawObject(obj) {
+            const playerCenterX = canvas.width / 2;
+            const playerCenterY = canvas.height / 2;
+            
+            // 计算对象在屏幕上的位置
+            const screenX = playerCenterX + (obj.position.x - gameState.playerPosition.x);
+            const screenY = playerCenterY + (obj.position.y - gameState.playerPosition.y);
+            
+            // 获取对象对应的图片
+            const imageName = getObjectImage(obj);
+            const image = gameState.petalImages[imageName];
+            
+            if (image) {
+                // 绘制图片
+                ctx.save();
+                ctx.translate(screenX, screenY);
+                if (imageName != 'flower.png'){
+                    ctx.rotate(-obj.angle * Math.PI / 180); // 旋转角度
+                }
+                    
+                
+                // 根据对象的大小调整图片尺寸
+                const width = obj.size[0] || 30;
+                const height = obj.size[1] || 30;
+                ctx.drawImage(image, -width/2, -height/2, width, height);
+                ctx.restore();
+            } else {
+                // 如果没有图片，则绘制默认形状
+                ctx.save();
+                ctx.translate(screenX, screenY);
+                ctx.rotate(obj.angle * Math.PI / 180);
+                
+                // 根据对象类型选择颜色
+                let color = '#FF6B6B'; // 默认红色
+                if (obj.name.includes('hornet')) color = '#9B59B6'; // 紫色
+                if (obj.name.includes('centipede')) color = '#8E44AD'; // 深紫色
+                if (obj.name.includes('rock')) color = '#7F8C8D'; // 灰色
+                if (obj.name.includes('ladybug')) color = '#E74C3C'; // 红色
+                if (obj.name.includes('flower')) color = '#3498DB'; // 蓝色
+                
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                
+                if (obj.name.includes('hornet')) {
+                    // 绘制大黄蜂形状
+                    ctx.ellipse(0, 0, width/2, height/2, 0, 0, Math.PI * 2);
+                } else if (obj.name.includes('centipede')) {
+                    // 绘制蜈蚣形状
+                    ctx.rect(-width/2, -height/2, width, height);
+                } else if (obj.name.includes('rock')) {
+                    // 绘制岩石形状
+                    ctx.rect(-width/2, -height/2, width, height);
+                } else if (obj.name.includes('ladybug')) {
+                    // 绘制瓢虫形状
+                    ctx.arc(0, 0, width/2, 0, Math.PI * 2);
+                } else if (obj.name.includes('petal')) {
+                    // 绘制花瓣形状
+                    ctx.ellipse(0, 0, width/2, height/2, 0, 0, Math.PI * 2);
+                } else {
+                    // 默认圆形
+                    ctx.arc(0, 0, width/2, 0, Math.PI * 2);
+                }
+                
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // 绘制玩家
+        function drawPlayer() {
+            const playerCenterX = canvas.width / 2;
+            const playerCenterY = canvas.height / 2;
+            
+            // 获取玩家花朵图片
+            const playerImage = gameState.petalImages['flower.png'];
+            
+            if (playerImage) {
+                // 绘制玩家花朵图片
+                ctx.save();
+                ctx.translate(playerCenterX, playerCenterY);
+                ctx.rotate(gameState.playerAngle);
+                
+                ctx.drawImage(
+                    playerImage, 
+                    -config.playerSize/2, 
+                    -config.playerSize/2, 
+                    config.playerSize, 
+                    config.playerSize
+                );
+                
+                // 绘制玩家状态指示器
+                if (gameState.playerState === 1) {
+                    // 攻击状态 - 红色光环
+                    ctx.strokeStyle = 'rgba(255, 0, 0, 0.7)';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, config.playerSize/2 + 5, 0, Math.PI * 2);
+                    ctx.stroke();
+                } else if (gameState.playerState === -1) {
+                    // 防御状态 - 蓝色光环
+                    ctx.strokeStyle = 'rgba(0, 0, 255, 0.7)';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, config.playerSize/2 + 5, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                
+                ctx.restore();
+            } else {
+                // 如果没有图片，则绘制默认形状
+                ctx.save();
+                ctx.translate(playerCenterX, playerCenterY);
+                
+                // 绘制玩家花朵
+                ctx.fillStyle = '#2ECC71'; // 绿色
+                ctx.beginPath();
+                ctx.arc(0, 0, config.playerSize/2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 绘制玩家状态指示器
+                if (gameState.playerState === 1) {
+                    // 攻击状态 - 红色光环
+                    ctx.strokeStyle = 'rgba(255, 0, 0, 0.7)';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, config.playerSize/2 + 5, 0, Math.PI * 2);
+                    ctx.stroke();
+                } else if (gameState.playerState === -1) {
+                    // 防御状态 - 蓝色光环
+                    ctx.strokeStyle = 'rgba(0, 0, 255, 0.7)';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, config.playerSize/2 + 5, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                
+                // 绘制玩家方向指示器
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(Math.cos(gameState.playerAngle) * config.playerSize, 
+                          Math.sin(gameState.playerAngle) * config.playerSize);
+                ctx.stroke();
+                
+                ctx.restore();
+            }
+        }
+
+        // 设置画布大小
+        function resizeCanvas() {
+            const container = document.getElementById('gameContainer');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+
+        // 初始化游戏
+        initGame();
+    </script>
+</body>
+</html>
